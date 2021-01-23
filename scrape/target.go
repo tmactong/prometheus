@@ -157,12 +157,14 @@ func (t *Target) offset(interval time.Duration, jitterSeed uint64) time.Duration
 	now := time.Now().UnixNano()
 
 	// Base is a pinned to absolute time, no matter how often offset is called.
+	// Base为距离下一次触发还有多长时间，下一次触发的时间预设为 now % interval = 0的时间
+	// offset用于打散多个prometheus发出的请求时间
 	var (
 		base   = int64(interval) - now%int64(interval)
 		offset = (t.hash() ^ jitterSeed) % uint64(interval)
 		next   = base + int64(offset)
 	)
-
+	//使下一次触发在一个interval之内
 	if next > int64(interval) {
 		next -= int64(interval)
 	}
