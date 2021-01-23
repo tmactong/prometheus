@@ -594,6 +594,8 @@ func main() {
 				}
 				return nil
 			},
+			//当一个actor的execute函数退出后，同时会触发所有actor的interrupt函数
+			//注意：在execute函数退出后，必须还可以调用interrupt函数
 			func(err error) {
 				close(cancel)
 			},

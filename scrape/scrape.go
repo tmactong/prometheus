@@ -238,7 +238,7 @@ func newScrapePool(cfg *config.ScrapeConfig, app storage.Appendable, jitterSeed 
 
 	buffers := pool.New(1e3, 100e6, 3, func(sz int) interface{} { return make([]byte, 0, sz) })
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background()) //没有将ctx作为sp的一个field，而是在创建sl的时候传入
 	sp := &scrapePool{
 		cancel:        cancel,
 		appendable:    app,
@@ -296,7 +296,7 @@ func (sp *scrapePool) DroppedTargets() []*Target {
 func (sp *scrapePool) stop() {
 	sp.mtx.Lock()
 	defer sp.mtx.Unlock()
-	sp.cancel()
+	sp.cancel() //调用cancel 触发sp的ctx Done，也就是sl的parentCtx
 	var wg sync.WaitGroup
 
 	sp.targetMtx.Lock()
@@ -995,6 +995,7 @@ func newScrapeLoop(ctx context.Context,
 }
 
 func (sl *scrapeLoop) run(interval, timeout time.Duration, errc chan<- error) {
+	//阻塞直到select中的条件满足一个
 	select {
 	case <-time.After(sl.scraper.offset(interval, sl.jitterSeed)):
 		// Continue after a scraping offset.
@@ -1044,7 +1045,7 @@ mainLoop:
 			return
 		case <-sl.ctx.Done():
 			break mainLoop
-		case <-ticker.C:
+		case <-ticker.C: //控制scrape时间，相当于sleep，但同时也监听了ctx是否Done
 		}
 	}
 
@@ -1111,9 +1112,9 @@ func (sl *scrapeLoop) scrapeAndReport(interval, timeout time.Duration, last, app
 	}
 
 	var contentType string
-	scrapeCtx, cancel := context.WithTimeout(sl.parentCtx, timeout)
+	scrapeCtx, cancel := context.WithTimeout(sl.parentCtx, timeout) //根据sl.parentCtx创建timeout的ctx，没有使用sl.ctx,忽略了sl.ctx信号
 	contentType, scrapeErr = sl.scraper.scrape(scrapeCtx, buf)
-	cancel()
+	cancel() //任务结束就要调用cancel
 
 	if scrapeErr == nil {
 		b = buf.Bytes()
@@ -1230,7 +1231,7 @@ func (sl *scrapeLoop) endOfRunStaleness(last time.Time, ticker *time.Ticker, int
 // Stop the scraping. May still write data and stale markers after it has
 // returned. Cancel the context to stop all writes.
 func (sl *scrapeLoop) stop() {
-	sl.cancel()
+	sl.cancel() //ctx的cancel可以被多次调用，并且可以在多个goroutine中同时调用
 	<-sl.stopped
 }
 
