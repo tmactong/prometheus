@@ -82,7 +82,7 @@ var (
 	// DefaultScrapeConfig is the default scrape configuration.
 	DefaultScrapeConfig = ScrapeConfig{
 		// ScrapeTimeout and ScrapeInterval default to the
-		// configured globals.
+		// configured globals.`
 		MetricsPath:     "/metrics",
 		Scheme:          "http",
 		HonorLabels:     false,
@@ -178,6 +178,9 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	// To make unmarshal fill the plain data struct rather than calling UnmarshalYAML
 	// again, we have to hide it using a type indirection.
 	type plain Config
+	//unmarshal 包含在UnmarshalYAML中，用于调用其他的type的unmarshal方法
+	//(*plain)(c)转换了type，这个type没有UnmarshalYaml方法，所以按照struct的方式进行decode
+	//所以调用unmarshal之后得到的是一个struct数据
 	if err := unmarshal((*plain)(c)); err != nil {
 		return err
 	}
@@ -201,6 +204,7 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 		// First set the correct scrape interval, then check that the timeout
 		// (inferred or explicit) is not greater than that.
+		// 如果不配置的话默认就是0，等于0相当于配置的为0或者没有配置
 		if scfg.ScrapeInterval == 0 {
 			scfg.ScrapeInterval = c.GlobalConfig.ScrapeInterval
 		}

@@ -144,6 +144,7 @@ func (m *Manager) Run(tsets <-chan map[string][]*targetgroup.Group) error {
 			m.updateTsets(ts)
 
 			select {
+			//触发reoad，如果当前还有没有接收的reload信号，则等待
 			case m.triggerReload <- struct{}{}:
 			default:
 			}
@@ -252,6 +253,9 @@ func (m *Manager) ApplyConfig(cfg *config.Config) error {
 	// Cleanup and reload pool if the configuration has changed.
 	var failed bool
 	for name, sp := range m.scrapePools {
+		//如果已经运行的sp的配置在新配置中没有，则停掉这个sp
+		//这个方法不会新建添加的sp，sp新建在reload中实现
+		//为什么要将stop和start分开？？？
 		if cfg, ok := m.scrapeConfigs[name]; !ok {
 			sp.stop()
 			delete(m.scrapePools, name)
