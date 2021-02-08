@@ -140,11 +140,13 @@ func (m *Manager) Run(tsets <-chan map[string][]*targetgroup.Group) error {
 	go m.reloader()
 	for {
 		select {
-		case ts := <-tsets:
+		case ts := <-tsets: //unbuffered channel，block
 			m.updateTsets(ts)
 
 			select {
-			//触发reoad，如果当前还有没有接收的reload信号，则等待
+			//触发reload，如果当前还有没有接收的reload信号，则进入default跳过
+			//不能block，如果block就不能接收到graceShut的信号了
+			//并且当前如果有reload堆积的话，也不需要传入，因为已经更新了targetsets，下次reload自然就会生效，妙！！！
 			case m.triggerReload <- struct{}{}:
 			default:
 			}
@@ -163,9 +165,11 @@ func (m *Manager) reloader() {
 		select {
 		case <-m.graceShut:
 			return
-		case <-ticker.C:
+		case <-ticker.C: //最短也要5s种执行reload，不会结束一个之后立即执行新的
 			select {
 			case <-m.triggerReload:
+				//reload会等待需要结束的sl退出
+				//在这个过程中是接收不到graceShut信号的,从而不能直接退出这个goroutine
 				m.reload()
 			case <-m.graceShut:
 				return
@@ -255,7 +259,7 @@ func (m *Manager) ApplyConfig(cfg *config.Config) error {
 	for name, sp := range m.scrapePools {
 		//如果已经运行的sp的配置在新配置中没有，则停掉这个sp
 		//这个方法不会新建添加的sp，sp新建在reload中实现
-		//为什么要将stop和start分开？？？
+		//为什么要将stop和start分开？？？ 可能和锁有关，待验证
 		if cfg, ok := m.scrapeConfigs[name]; !ok {
 			sp.stop()
 			delete(m.scrapePools, name)

@@ -107,6 +107,7 @@ func (c StaticConfig) NewDiscoverer(DiscovererOptions) (Discoverer, error) {
 
 type staticDiscoverer []*targetgroup.Group
 
+//static config只在reload配置的时候才触发更新
 func (c staticDiscoverer) Run(ctx context.Context, up chan<- []*targetgroup.Group) {
 	// TODO: existing implementation closes up chan, but documentation explicitly forbids it...?
 	defer close(up)

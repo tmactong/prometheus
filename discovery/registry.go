@@ -35,7 +35,8 @@ const (
 var (
 	configNames      = make(map[string]Config)
 	configFieldNames = make(map[reflect.Type]string)
-	configFields     []reflect.StructField
+	//configFields应该是不同ScrapeConfig的关键字
+	configFields []reflect.StructField
 
 	configTypesMu sync.Mutex
 	configTypes   = make(map[reflect.Type]reflect.Type)
@@ -89,6 +90,8 @@ func getConfigType(out reflect.Type) reflect.Type {
 	var fields []reflect.StructField
 	for i, n := 0, out.NumField(); i < n; i++ {
 		switch field := out.Field(i); {
+		//ScrapConfig
+		//field ServiceDiscoveryConfigs
 		case field.PkgPath == "" && field.Type != configsType:
 			fields = append(fields, field)
 		default:
@@ -119,6 +122,8 @@ func UnmarshalYAMLWithInlineConfigs(out interface{}, unmarshal func(interface{})
 	}
 	outTyp := outVal.Type()
 
+	//从outType获得cfgTyp
+	//scrape discovery服务 outTyp为 ScrapeConfig的类型
 	cfgTyp := getConfigType(outTyp)
 	cfgPtr := reflect.New(cfgTyp)
 	cfgVal := cfgPtr.Elem()
@@ -139,6 +144,7 @@ func UnmarshalYAMLWithInlineConfigs(out interface{}, unmarshal func(interface{})
 		return fmt.Errorf("discovery: Configs field not found in type: %T", out)
 	}
 
+	//将数据加载到cfgPtr中
 	// Unmarshal into dynamic value.
 	if err := unmarshal(cfgPtr.Interface()); err != nil {
 		return replaceYAMLTypeError(err, cfgTyp, outTyp)
