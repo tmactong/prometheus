@@ -116,6 +116,7 @@ func UnmarshalYAMLWithInlineConfigs(out interface{}, unmarshal func(interface{})
 	if outVal.Kind() != reflect.Ptr {
 		return fmt.Errorf("discovery: can only unmarshal into a struct pointer: %T", out)
 	}
+	//在修改outVal的时候同样也会修改out
 	outVal = outVal.Elem()
 	if outVal.Kind() != reflect.Struct {
 		return fmt.Errorf("discovery: can only unmarshal into a struct pointer: %T", out)
@@ -132,6 +133,7 @@ func UnmarshalYAMLWithInlineConfigs(out interface{}, unmarshal func(interface{})
 	var configs *Configs
 	for i, n := 0, outVal.NumField(); i < n; i++ {
 		if outTyp.Field(i).Type == configsType {
+			//相当于拿出outVal中config的地址并且赋予了Configs的类型
 			configs = outVal.Field(i).Addr().Interface().(*Configs)
 			continue
 		}

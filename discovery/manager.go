@@ -239,6 +239,7 @@ func (m *Manager) sender() {
 			case <-m.triggerSend:
 				sentUpdates.WithLabelValues(m.name).Inc()
 				select {
+				//每次都是全量更新
 				case m.syncCh <- m.allGroups():
 				default:
 					delayedUpdates.WithLabelValues(m.name).Inc()

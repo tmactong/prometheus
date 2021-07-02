@@ -690,6 +690,7 @@ func main() {
 		)
 	}
 	{
+		//初始化加载配置
 		// Initial configuration loading.
 		cancel := make(chan struct{})
 		g.Add(
